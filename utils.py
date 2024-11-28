@@ -1,6 +1,7 @@
 import os
 import re
 from datetime import datetime
+import xxhash
 
 
 
@@ -72,7 +73,7 @@ def get_checksum_list_from_report(report_file):
                 # добавляем в список source_path найденный путь и номер строки в файле репорта
                 source_path.append([match.group(1), linenum])
                 
-                print(f"Source path: {source_path}")
+            #    print(f"Source path: {source_path}")
 
             match = None
             # Ищем начало и конец блока описания файла в репорте и добавляем в список file_block_start и file_block_end
@@ -102,7 +103,7 @@ def get_checksum_list_from_report(report_file):
                 file_read = lines[file_block_start[i]].split(source_path[0][0])[1].strip()
                 file_read = report_path.split("_Reports")[0]+file_read
                 #file_read = os.path.join(report_path.split("_Reports")[0], file_read)
-            print(f"File: {file_read}")
+            # print(f"File: {file_read}")
 
 
             # проверяем наличие на диске file_read
@@ -227,15 +228,38 @@ def get_checksum_from_reports(report_file,all_files):
     return all_files
 
 
-def hash_process(files_to_hash)
+def hash_process(files_to_hash):
     for disk_file in files_to_hash:
-        # calculanete xxHash3-64 checksum for file disk_file[0]
-        #compare with disk_file[2]
-        #if not equal, print error message
-
-def xxhash64
-
         
+        hash = hash_file(disk_file[0], disk_file[3])
+      
+
+        print(f"File: {disk_file[0]},",hash)
+    return True
+
+
+# создаем функцию для вычисления контрольной суммы файла
+
+def hash_file(file_path, hash_type):
+    try:
+        with open(file_path, 'rb') as f:
+            # if hash_type == 'xxHash3-64':
+            hash = xxhash.xxh64()
+            while True:
+                data = f.read(1000000)
+                if not data:
+                    break
+                hash.update(data)
+            return hash.hexdigest()
+    except FileNotFoundError:
+        print(f"File {file_path} not found.")
+        return None
+    except PermissionError:
+        print(f"Permission denied for file {file_path}.")
+        return None
+    except Exception as e:
+        print(f"Error hashing file {file_path}: {e}")
+        return None
 
 
 #    except FileNotFoundError:

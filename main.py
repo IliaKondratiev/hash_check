@@ -2,6 +2,7 @@ import sys
 from utils import get_file_list
 from utils import get_checksum_from_reports
 from utils import get_checksum_list_from_report
+from utils import hash_process
 from datetime import datetime
 
 def get_arguments():
@@ -33,8 +34,7 @@ def main():
     report_txt_files = [file for file in all_files if os.path.dirname(file[0]).endswith('Reports') & file[0].endswith('.txt')]
     print(f"Number of Report txt files: {len(report_txt_files)}")
     
-
-
+ 
     #for report in report_txt_files:
     #    all_checksum = get_checksum_from_reports(report[1],all_files)
     #    all_files = all_checksum
@@ -46,9 +46,22 @@ def main():
         report_files = get_checksum_list_from_report(report[0])
         report_all_files.extend(report_files)
     
+      
+    
    
     files_to_hash = []
     date_format = "%d.%m.%Y, %H:%M"
+
+    for report_file in report_all_files:
+        disk_file_found = False
+        for disk_file in all_files:
+            if disk_file[0] == report_file[0]:
+                disk_file_found = True
+                break
+        if not disk_file_found:
+            print(f"File {report_file[0]} not found in disk.")
+
+
 
     for disk_file in all_files:
         file_found = 0
@@ -57,13 +70,16 @@ def main():
         file_hash_type = disk_file[3]
         file_hash = disk_file[2]
         file_hash_date = datetime.strptime("29.08.1974, 14:00", date_format)
+        report_found = False
         for report_file in report_all_files:
             if disk_file[0] == report_file[0]:
                 file_found =+ 1
+                report_found = True
                 if file_hash_date < report_file[4]:
                     file_hash_date = report_file[4]
                     file_hash = report_file[2]
                     file_hash_type = report_file[3]
+
         if file_found == 0:
             print(f"File {disk_file[0]} not found in reports.")
         else:
@@ -71,7 +87,8 @@ def main():
 
 
                 
-        
+    hash_process(files_to_hash)
+
     
     return True
 
