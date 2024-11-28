@@ -19,7 +19,7 @@ def get_file_list(path):
                     file_checksum = None
                     file_checksum_type = None
                     file_checksum_date = None
-                    file_list.append((file, file_path, file_size, file_checksum, file_checksum_type, file_checksum_date))
+                    file_list.append((file_path, file_size, file_checksum, file_checksum_type, file_checksum_date))
         return file_list
     except FileNotFoundError:
         print(f"Directory {path} not found.")
@@ -106,18 +106,29 @@ def get_checksum_list_from_report(report_file):
 
 
             # проверяем наличие на диске file_read
-            if os.path.exists(file_read):
-                print(f"File {file_read} exists.")
-            else:
-                print(f"File {file_read} not found.")
+            #if os.path.exists(file_read):
+            #    print(f"File {file_read} exists.")
+            #else:
+            #    print(f"File {file_read} not found.")
             
         # ищем контрольную сумму в последней строке блока описания файла
         #   if checksum_pattern.search(lines[file_block_end[i]]):
             file_checksum = lines[file_block_end[i]].split(': ')[1].strip()
             file_heshtype = lines[file_block_end[i]].split(': ')[0].strip()
+            #конвертируем размер файла в байтах в число, не забываем про запятую в числе    
+            #file_size = file_size.replace(',', '.')
+            file_size = lines[file_block_start[i]+1].split(': ')[1].strip()
+            file_size = file_size.replace(',', '.')  # заменяем запятую на точку
+            
+            if file_size.endswith('KB'):
+                file_size1 = int(float(file_size.split(' ')[0]) * 1024)
+            elif file_size.endswith('MB'):
+                file_size1 = int(float(file_size.split(' ')[0]) * 1000 * 1000)
+            elif file_size.endswith('GB'):
+                file_size1 = int(float(file_size.split(' ')[0]) * 1000 * 1000 * 1000)
         #   print(f"Checksum: {file_checksum}")
 
-            report_file_list.append((file_read, file_checksum, file_heshtype, replication_finish_time))
+            report_file_list.append((file_read, file_size1, file_checksum, file_heshtype, replication_finish_time))
         
         return report_file_list
 
@@ -214,8 +225,19 @@ def get_checksum_from_reports(report_file,all_files):
     all_files = [tuple(file) for file in all_files]
 
     return all_files
-    
-            
+
+
+def hash_process(files_to_hash)
+    for disk_file in files_to_hash:
+        # calculanete xxHash3-64 checksum for file disk_file[0]
+        #compare with disk_file[2]
+        #if not equal, print error message
+
+def xxhash64
+
+        
+
+
 #    except FileNotFoundError:
 #        print(f"File {report_file} not found.")
 #        return None
