@@ -77,7 +77,8 @@ def get_checksum_from_reports(report_file,all_files):
                 # Combine the parent path of report_path with the extracted part
                 file_read = os.path.join(os.path.dirname(report_path)) + extracted_part
 
-            if line == 'Size: N/A':
+            next_line_index = lines.index(line) + 1
+            if next_line_index < len(lines) and lines[next_line_index].strip() == 'Size: N/A':
                 file_read = None
             
             if file_read:
@@ -87,13 +88,17 @@ def get_checksum_from_reports(report_file,all_files):
                     file_checksum = match.group(1)
                     file_checksum_type = 'xxHash3-64'
                     file_checksum_date = replication_finish_time
+                    found_in_all_files = False
                     #find in all_files list file with the same path and update checksum, checksum type and checksum date
                     for file in all_files:
                         if file[1] == file_read and (file[5] is None or file_checksum_date < file[5]):
                             file[3] = file_checksum
                             file[4] = file_checksum_type
                             file[5] = file_checksum_date
+                            found_in_all_files = True
                             break
+                    if found_in_all_files == False:
+                        print(f"File {file_read} not found in all_files list.")
                     file_read = None
 
 
