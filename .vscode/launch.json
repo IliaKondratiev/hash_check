@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal"
-            "args": "/Volumes/bastet2/guantanamera/disks/Guantanamera_09 /Volumes/bastet2/guantanamera/disks/Guantanamera_11"
+            "args": " /Volumes/Check/20240829/CAM_A/A025  /Volumes/Check/20240829/CAM_A/A026"
         }
     ]
 }

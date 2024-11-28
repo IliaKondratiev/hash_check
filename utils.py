@@ -31,6 +31,107 @@ def get_file_list(path):
         print(f"Permission denied for directory {path}.")
         return []
     
+def get_checksum_list_from_report(report_file):
+
+    report_path=os.path.dirname(report_file)
+    replication_finish_date = None
+    source_path = []
+    report_file_list = []
+    file_block_start = []
+    file_block_end = []
+    file_read = None
+    date_format = "%d.%m.%Y, %H:%M"
+    # Define regex patterns
+    finish_date_pattern = re.compile(r"Replication Finish Date:\s+(.+)")
+    source_path_pattern = re.compile(r"Source path:\s+(.+)")
+    size_pattern = re.compile(r"Size:\s+(.+)")
+    checksum_type_pattern = re.compile(r"Checksum Type:\s+(.+)")
+    checksum_pattern = re.compile(r"xxHash3-64:\s+([a-f0-9]+)")
+    def split_line(line):
+        parts = line.split(': ', 1)
+        if len(parts) == 2:
+            return parts[0], parts[1]
+        else:
+            return parts[0], ''
+    status_pattern = re.compile(r"Status: Offloaded")
+    try:
+        with open(report_file, 'r') as f:
+            lines = f.readlines()
+        linenum = 0
+        for line in lines:
+            
+            if not replication_finish_date:
+                match = finish_date_pattern.search(line)
+                if match:
+                    replication_finish_date = match.group(1)
+                    replication_finish_time = datetime.strptime(replication_finish_date, date_format)
+        
+            match = None
+            match = source_path_pattern.search(line)
+            if match :
+                # добавляем в список source_path найденный путь и номер строки в файле репорта
+                source_path.append([match.group(1), linenum])
+                
+                print(f"Source path: {source_path}")
+
+            match = None
+            # Ищем начало и конец блока описания файла в репорте и добавляем в список file_block_start и file_block_end
+            # Блок начинается за строчку до size_pattern и заканчивается строкой после status_pattern
+            # строки, начинающиеся с табуляции игнорируются 
+            if line.startswith("Size:"):
+                file_block_start.append(linenum-1)
+            if line.startswith("Status: Offloaded"):
+                file_block_end.append(linenum+1)
+            linenum += 1
+
+
+        #В каждом блоке описания файла ищем путь к файлу и его контрольную сумму и тип контрольной суммы
+        for i in range(len(file_block_start)):
+            if lines[file_block_start[i]+1].startswith("Size: Zero KB") or lines[file_block_start[i]+1].startswith("Size: N/A"):
+                continue
+            # из первой строки блока описания файла выделяем путь к файлу и заменяем в нем source_path, подходящий по номеру строки на report_path без последней папки
+            if len(source_path) > 1:
+                for j in range(len(source_path) - 1):
+                    if file_block_start[i] > source_path[j][1] and file_block_start[i] < source_path[j + 1][1]:
+                        file_read = lines[file_block_start[i]].split(source_path[j][0])[1].strip()
+                        file_read = report_path.split("_Reports")[0]+file_read
+                        #file_read = lines[file_block_start[i]].split(source_path[j][0])[1].strip()
+                        #file_read = os.path.join(os.path.dirname(report_path), file_read)
+                        break
+            else:
+                file_read = lines[file_block_start[i]].split(source_path[0][0])[1].strip()
+                file_read = report_path.split("_Reports")[0]+file_read
+                #file_read = os.path.join(report_path.split("_Reports")[0], file_read)
+            print(f"File: {file_read}")
+
+
+            # проверяем наличие на диске file_read
+            if os.path.exists(file_read):
+                print(f"File {file_read} exists.")
+            else:
+                print(f"File {file_read} not found.")
+            
+        # ищем контрольную сумму в последней строке блока описания файла
+        #   if checksum_pattern.search(lines[file_block_end[i]]):
+            file_checksum = lines[file_block_end[i]].split(': ')[1].strip()
+            file_heshtype = lines[file_block_end[i]].split(': ')[0].strip()
+        #   print(f"Checksum: {file_checksum}")
+
+            report_file_list.append((file_read, file_checksum, file_heshtype, replication_finish_time))
+        
+        return report_file_list
+
+
+            
+        
+  
+    except FileNotFoundError:
+        print(f"File {report_file} not found.")
+        return None
+    except PermissionError:
+        print(f"Permission denied for file {report_file}.")
+        return None
+    
 def get_checksum_from_reports(report_file,all_files):
     report_path=os.path.dirname(report_file)
     replication_finish_date = None

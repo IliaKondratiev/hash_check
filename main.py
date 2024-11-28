@@ -1,6 +1,7 @@
 import sys
 from utils import get_file_list
 from utils import get_checksum_from_reports
+from utils import get_checksum_list_from_report
 
 def get_arguments():
     try:
@@ -28,17 +29,26 @@ def main():
 
     #get from all_files list of all .txt files, lying in folders with name ending with 'Reports'
     import os
-    report_txt_files = [file for file in all_files if os.path.dirname(file[1]).endswith('Reports')]
+    report_txt_files = [file for file in all_files if os.path.dirname(file[1]).endswith('Reports') & file[0].endswith('.txt')]
     print(f"Number of Report txt files: {len(report_txt_files)}")
     
+
+
+    #for report in report_txt_files:
+    #    all_checksum = get_checksum_from_reports(report[1],all_files)
+    #    all_files = all_checksum
+
+    report_all_files = []
+    report_files=[]
+
     for report in report_txt_files:
-        all_checksum = get_checksum_from_reports(report[1],all_files)
-        all_files = all_checksum
+        report_files = get_checksum_list_from_report(report[1])
+        report_all_files.append(report_files)
+
+    print(f"Checksumms in report",report_all_files)
+
     #print(f"Checksums: {all_checksum}")
-    for file in all_files:
-        if file[5]:
-            break
-        print(file[1])
+    
 
     
 
