@@ -6,6 +6,7 @@ import xxhash
 
 
 def get_file_list(path):
+    date_format = "%d.%m.%Y, %H:%M"
     try:
     # return os.listdir(path)
     # return table of all files in subfolders with filename, path to file, filesize in bytes
@@ -19,7 +20,7 @@ def get_file_list(path):
                     file_size = os.path.getsize(file_path)
                     file_checksum = None
                     file_checksum_type = None
-                    file_checksum_date = None
+                    file_checksum_date = datetime.strptime('05.09.2124, 05:26', date_format)
                     file_list.append((file_path, file_size, file_checksum, file_checksum_type, file_checksum_date))
         return file_list
     except FileNotFoundError:
@@ -229,12 +230,38 @@ def get_checksum_from_reports(report_file,all_files):
 
 
 def hash_process(files_to_hash):
-    for disk_file in files_to_hash:
-        
-        hash = hash_file(disk_file[0], disk_file[3])
-      
+    path_to_check_folder = '/Volumes/bastet2/guantanamera/check/'
+    log_file_name = 'hash_check.log'
+    bad_file_name = 'bad_hash.log'
+    # удалить файлы log_file_name и bad_file_name
+    try:
+        os.remove(path_to_check_folder+log_file_name)
+    except FileNotFoundError:
+        pass
+    try:    
+        os.remove(path_to_check_folder+bad_file_name)
+    except FileNotFoundError:
+        pass
+    all_files_number = len(files_to_hash)
+    bad_hash = 0
+    checked_files_number = 0
+    checked_file_bytes = 0
+    all_files_byted = sum(file[1] for file in files_to_hash)
 
-        print(f"File: {disk_file[0]},",hash)
+    for disk_file in files_to_hash:
+        status = 'Ok'
+        hash = hash_file(disk_file[0], disk_file[3])
+        if hash != disk_file[2]:
+            bad_hash += 1
+            status = 'Bad'
+            with open(path_to_check_folder+bad_file_name, 'a') as f:
+                f.write(f"File: {disk_file[0]}, hash: {disk_file[2]}, calculated hash: {hash}\n")
+        checked_files_number += 1
+        checked_file_bytes += disk_file[1]
+        with open(path_to_check_folder+log_file_name, 'a') as f:
+            f.write(f"File: {disk_file[0]}, hash: {hash}, report hash {disk_file[2]}, Status {status}\n")
+            percentage_checked = (checked_file_bytes / all_files_byted) * 100
+        print(f"File: {disk_file[0]}, Status {status}, {checked_files_number} of {all_files_number}, {percentage_checked:.2f}%, bad {bad_hash}.")
     return True
 
 

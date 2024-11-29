@@ -5,6 +5,7 @@ from utils import get_checksum_from_reports
 from utils import get_checksum_list_from_report
 from utils import hash_process
 from datetime import datetime
+import pandas as pd
 
 def get_arguments():
     try:
@@ -21,6 +22,7 @@ def main():
     for path in paths:
         file_list = get_file_list(path)
         all_files.extend(file_list)
+    #all_files = list(set(all_files))
     #print(f"All files: {all_files[:20]}")
     #    print(f"Files in {path}: {file_list[:20]}")
     
@@ -32,6 +34,7 @@ def main():
 
     #get from all_files list of all .txt files, lying in folders with name ending with 'Reports'
     import os
+
     report_txt_files = [file for file in all_files if os.path.dirname(file[0]).endswith('Reports') & file[0].endswith('.txt')]
     print(f"Number of Report txt files: {len(report_txt_files)}")
     
@@ -47,44 +50,64 @@ def main():
         report_files = get_checksum_list_from_report(report[0])
         report_all_files.extend(report_files)
     
-      
-    
-   
-    files_to_hash = []
-    date_format = "%d.%m.%Y, %H:%M"
+    # Конвертировать all_filese в Panda Tables
+    #  
+    # Convert all_files to DataFrame
+    df_all_files = pd.DataFrame(all_files, columns=['file_path', 'file_size', 'file_hash', 'file_hash_type','file_hash_date'])
+    df_all_files.set_index('file_path', inplace=True)
 
+    # напечатать количество строк в df_all_files
+    print(f"Number of files in df_all_files: {df_all_files.shape[0]}")
+    # удалить строки с дублирующимся file_path
+    df_all_files = df_all_files[~df_all_files.index.duplicated(keep='first')]
+    # напечатать количество строк в df_all_files
+    print(f"Number of files in df_all_files: {df_all_files.shape[0]}")
+
+    print(df_all_files.head())
+    NotOnDisk = []
+    # по всем строкам в report_all_files найти соответствующие строки в df_all_files
     for report_file in report_all_files:
-        disk_file_found = False
-        for disk_file in all_files:
-            if disk_file[0] == report_file[0]:
-                disk_file_found = True
-                break
-        if not disk_file_found:
-            print(f"File {report_file[0]} not found in disk.")
-
-
-
-    for disk_file in all_files:
-        file_found = 0
-        file_path = disk_file[0]
-        file_size = disk_file[1]
-        file_hash_type = disk_file[3]
-        file_hash = disk_file[2]
-        file_hash_date = datetime.strptime("29.08.1974, 14:00", date_format)
-        report_found = False
-        for report_file in report_all_files:
-            if disk_file[0] == report_file[0]:
-                file_found =+ 1
-                report_found = True
-                if file_hash_date < report_file[4]:
-                    file_hash_date = report_file[4]
-                    file_hash = report_file[2]
-                    file_hash_type = report_file[3]
-
-        if file_found == 0:
-            print(f"File {disk_file[0]} not found in reports.")
+        file_path = report_file[0]
+        file_hash = report_file[2]
+        file_hash_type = report_file[3]
+        file_hash_date = report_file[4]
+        if file_path in df_all_files.index:
+            df_all_files.at[file_path, 'file_hash'] = file_hash
+            df_all_files.at[file_path, 'file_hash_type'] = file_hash_type
+            df_all_files.at[file_path, 'file_hash_date'] = file_hash_date
+            #print(f'File {file_path} found in all_files.Hash updated {df_all_files.at[file_path,'file_hash']}.')
         else:
-            files_to_hash.append((file_path, file_size, file_hash, file_hash_type, file_hash_date))
+            print(f"File {file_path} not found in all_files.")
+            NotOnDisk.append(file_path)
+
+    # сохранить NotOnDisk в файл в текстовом виде
+    try:
+        os.remove('/Volumes/bastet2/guantanamera/check/NotOnDisk.txt')
+    except FileNotFoundError:
+        pass
+    with open('/Volumes/bastet2/guantanamera/check/NotOnDisk.txt', 'w') as f:
+        for item in NotOnDisk:
+            f.write("%s\n" % item) 
+
+    
+    print(df_all_files.head())
+    # напечатать число строк в df_all_files без file_hash
+    print(f"Number of files in df_all_files without hash: {df_all_files[df_all_files['file_hash'].isnull()].shape[0]}")
+    # напечатать  строки в df_all_files без file_hash
+    print(df_all_files[df_all_files['file_hash'].isnull()])
+    # создать список NoHash из file_path без file_hash
+    NoHash = df_all_files[df_all_files['file_hash'].isnull()].index.tolist()
+    # сохранить NooHash в файл в текстовом виде
+    try:
+        os.remove('/Volumes/bastet2/guantanamera/check/NoHash.txt')
+    except FileNotFoundError:
+        pass
+    with open('/Volumes/bastet2/guantanamera/check/NoHash.txt', 'w') as f:
+        for item in NoHash:
+            f.write("%s\n" % item)
+    # создать список files_to_hash из df_all_files строк. содержащих  file_hash
+    # со структурой (file_path, file_size, file_hash, file_hash_type, file_hash_date)
+    files_to_hash = df_all_files[~df_all_files['file_hash'].isnull()].reset_index().values.tolist()
 
 
                 
