@@ -75,34 +75,32 @@ def get_checksum_list_from_report(report_file):
                 
             #    print(f"Source path: {source_path}")
 
-            match = None
+            
             # Ищем начало и конец блока описания файла в репорте и добавляем в список file_block_start и file_block_end
             # Блок начинается за строчку до size_pattern и заканчивается строкой после status_pattern
             # строки, начинающиеся с табуляции игнорируются 
             if line.startswith("Size:"):
-                file_block_start.append(linenum-1)
+                file_block_start.append([linenum-1, source_path[-1][0]])
             if line.startswith("Status: Offloaded"):
                 file_block_end.append(linenum+1)
             linenum += 1
 
+            match = None
+
 
         #В каждом блоке описания файла ищем путь к файлу и его контрольную сумму и тип контрольной суммы
         for i in range(len(file_block_start)):
-            if lines[file_block_start[i]+1].startswith("Size: Zero KB") or lines[file_block_start[i]+1].startswith("Size: N/A"):
+            if lines[file_block_start[i][0]+1].startswith("Size: Zero KB") or lines[file_block_start[i][0]+1].startswith("Size: N/A"):
+                continue
+            # если в первой строке блока файл без расширения - пропускаем его
+            if not re.match(r'.*\.[a-zA-Z0-9]{3,6}$', lines[file_block_start[i][0]].strip()):
                 continue
             # из первой строки блока описания файла выделяем путь к файлу и заменяем в нем source_path, подходящий по номеру строки на report_path без последней папки
-            if len(source_path) > 1:
-                for j in range(len(source_path) - 1):
-                    if file_block_start[i] > source_path[j][1] and file_block_start[i] < source_path[j + 1][1]:
-                        file_read = lines[file_block_start[i]].split(source_path[j][0])[1].strip()
-                        file_read = report_path.split("_Reports")[0]+file_read
-                        #file_read = lines[file_block_start[i]].split(source_path[j][0])[1].strip()
-                        #file_read = os.path.join(os.path.dirname(report_path), file_read)
-                        break
-            else:
-                file_read = lines[file_block_start[i]].split(source_path[0][0])[1].strip()
-                file_read = report_path.split("_Reports")[0]+file_read
-                #file_read = os.path.join(report_path.split("_Reports")[0], file_read)
+
+            source_path_trimmed = os.path.dirname(file_block_start[i][1])
+            file_read = lines[file_block_start[i][0]].split(source_path_trimmed)[1].strip()
+            file_read = os.path.dirname(report_path)+file_read
+            #file_read = os.path.join(report_path.split("_Reports")[0], file_read)
             # print(f"File: {file_read}")
 
 
@@ -118,7 +116,7 @@ def get_checksum_list_from_report(report_file):
             file_heshtype = lines[file_block_end[i]].split(': ')[0].strip()
             #конвертируем размер файла в байтах в число, не забываем про запятую в числе    
             #file_size = file_size.replace(',', '.')
-            file_size = lines[file_block_start[i]+1].split(': ')[1].strip()
+            file_size = lines[file_block_start[i][0]+1].split(': ')[1].strip()
             file_size = file_size.replace(',', '.')  # заменяем запятую на точку
             
             if file_size.endswith('KB'):
@@ -127,6 +125,8 @@ def get_checksum_list_from_report(report_file):
                 file_size1 = int(float(file_size.split(' ')[0]) * 1000 * 1000)
             elif file_size.endswith('GB'):
                 file_size1 = int(float(file_size.split(' ')[0]) * 1000 * 1000 * 1000)
+            else:
+                file_size1 = int(float(file_size.split(' ')[0]))
         #   print(f"Checksum: {file_checksum}")
 
             report_file_list.append((file_read, file_size1, file_checksum, file_heshtype, replication_finish_time))
@@ -244,7 +244,7 @@ def hash_file(file_path, hash_type):
     try:
         with open(file_path, 'rb') as f:
             # if hash_type == 'xxHash3-64':
-            hash = xxhash.xxh64()
+            hash = xxhash.xxh3_64()
             while True:
                 data = f.read(1000000)
                 if not data:

@@ -1,4 +1,5 @@
 import sys
+import xxhash 
 from utils import get_file_list
 from utils import get_checksum_from_reports
 from utils import get_checksum_list_from_report
